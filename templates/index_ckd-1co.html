@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CKD Risk Predictor</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #A7D9C2;
+      margin: 0;
+      padding: 0;
+    }
+    .page-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 50px 20px;
+    }
+    .container {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      max-width: 700px;
+      width: 100%;
+    }
+    h1 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 25px;
+      padding: 12px;
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .result-box {
+      margin-top: 30px;
+      padding: 20px;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 10px;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div class="container">
+    <h1>ระบบประเมินความเสี่ยงโรคไตเรื้อรัง (CKD)</h1>
+    <form method="POST">
+      <!-- Numeric fields -->
+      {% set numeric_fields = {
+        "age": "อายุ (age)",
+        "blood_pressure": "ความดันโลหิต (blood_pressure)",
+        "specific_gravity": "ความถ่วงจำเพาะของปัสสาวะ (specific_gravity)",
+        "albumin": "อัลบูมิน (albumin)",
+        "sugar": "น้ำตาลในปัสสาวะ (sugar)",
+        "blood_glucose_random": "น้ำตาลในเลือดแบบสุ่ม (blood_glucose_random)",
+        "blood_urea": "ยูเรียในเลือด (blood_urea)",
+        "serum_creatinine": "ครีเอตินินในเลือด (serum_creatinine)",
+        "sodium": "โซเดียม (sodium)",
+        "potassium": "โพแทสเซียม (potassium)",
+        "hemoglobin": "ฮีโมโกลบิน (hemoglobin)",
+        "packed_cell_volume": "เปอร์เซ็นต์เม็ดเลือดแดงอัดแน่น (packed_cell_volume)",
+        "white_blood_cell_count": "เม็ดเลือดขาว (white_blood_cell_count)",
+        "red_blood_cell_count": "เม็ดเลือดแดง (red_blood_cell_count)"
+      } %}
+      {% for key, label in numeric_fields.items() %}
+        <label>{{ label }}</label>
+        <input type="number" step="any" name="{{ key }}" required value="{{ request.form.get(key, '') }}">
+      {% endfor %}
+
+      <!-- Categorical fields -->
+      <label>เซลล์เม็ดเลือดแดง (red_blood_cells)</label>
+      <select name="red_blood_cells" required>
+        <option value="">เลือก</option>
+        <option value="normal" {% if request.form.get('red_blood_cells') == 'normal' %}selected{% endif %}>ปกติ</option>
+        <option value="abnormal" {% if request.form.get('red_blood_cells') == 'abnormal' %}selected{% endif %}>ผิดปกติ</option>
+      </select>
+
+      <label>เซลล์เยื่อบุท่อไต (pus_cell)</label>
+      <select name="pus_cell" required>
+        <option value="">เลือก</option>
+        <option value="normal" {% if request.form.get('pus_cell') == 'normal' %}selected{% endif %}>ปกติ</option>
+        <option value="abnormal" {% if request.form.get('pus_cell') == 'abnormal' %}selected{% endif %}>ผิดปกติ</option>
+      </select>
+
+      <label>พบเซลล์หนอง (pus_cell_clumps)</label>
+      <select name="pus_cell_clumps" required>
+        <option value="">เลือก</option>
+        <option value="present" {% if request.form.get('pus_cell_clumps') == 'present' %}selected{% endif %}>พบ</option>
+        <option value="notpresent" {% if request.form.get('pus_cell_clumps') == 'notpresent' %}selected{% endif %}>ไม่พบ</option>
+      </select>
+
+      <label>พบแบคทีเรีย (bacteria)</label>
+      <select name="bacteria" required>
+        <option value="">เลือก</option>
+        <option value="present" {% if request.form.get('bacteria') == 'present' %}selected{% endif %}>พบ</option>
+        <option value="notpresent" {% if request.form.get('bacteria') == 'notpresent' %}selected{% endif %}>ไม่พบ</option>
+      </select>
+
+      <label>ความดันโลหิตสูง (hypertension)</label>
+      <select name="hypertension" required>
+        <option value="">เลือก</option>
+        <option value="yes" {% if request.form.get('hypertension') == 'yes' %}selected{% endif %}>ใช่</option>
+        <option value="no" {% if request.form.get('hypertension') == 'no' %}selected{% endif %}>ไม่ใช่</option>
+      </select>
+
+      <label>เบาหวาน (diabetes_mellitus)</label>
+      <select name="diabetes_mellitus" required>
+        <option value="">เลือก</option>
+        <option value="yes" {% if request.form.get('diabetes_mellitus') == 'yes' %}selected{% endif %}>ใช่</option>
+        <option value="no" {% if request.form.get('diabetes_mellitus') == 'no' %}selected{% endif %}>ไม่ใช่</option>
+      </select>
+
+      <label>โรคหลอดเลือดหัวใจ (coronary_artery_disease)</label>
+      <select name="coronary_artery_disease" required>
+        <option value="">เลือก</option>
+        <option value="yes" {% if request.form.get('coronary_artery_disease') == 'yes' %}selected{% endif %}>ใช่</option>
+        <option value="no" {% if request.form.get('coronary_artery_disease') == 'no' %}selected{% endif %}>ไม่ใช่</option>
+      </select>
+
+      <label>ความอยากอาหาร (appetite)</label>
+      <select name="appetite" required>
+        <option value="">เลือก</option>
+        <option value="good" {% if request.form.get('appetite') == 'good' %}selected{% endif %}>ดี</option>
+        <option value="poor" {% if request.form.get('appetite') == 'poor' %}selected{% endif %}>แย่</option>
+      </select>
+
+      <label>บวมน้ำที่เท้า (pedal_edema)</label>
+      <select name="pedal_edema" required>
+        <option value="">เลือก</option>
+        <option value="yes" {% if request.form.get('pedal_edema') == 'yes' %}selected{% endif %}>ใช่</option>
+        <option value="no" {% if request.form.get('pedal_edema') == 'no' %}selected{% endif %}>ไม่ใช่</option>
+      </select>
+
+      <label>ภาวะโลหิตจาง (aanemia)</label>
+      <select name="aanemia" required>
+        <option value="">เลือก</option>
+        <option value="yes" {% if request.form.get('aanemia') == 'yes' %}selected{% endif %}>ใช่</option>
+        <option value="no" {% if request.form.get('aanemia') == 'no' %}selected{% endif %}>ไม่ใช่</option>
+      </select>
+
+      <button type="submit">ประเมินความเสี่ยง</button>
+      <button type="reset" onclick="window.location.href='/'" style="margin-top: 10px; background-color: #007bff;">ล้างข้อมูล</button>
+    </form>
+
+    {% if prediction is not none %}
+      <div id="result" class="result-box" style="
+        background-color: {{ '#ffe6e6' if prediction == 1 else '#ccffcc' }};
+        color: {{ '#cc0000' if prediction == 1 else '#006600' }};
+        border: 2px solid {{ '#ff4d4d' if prediction == 1 else '#33cc33' }};">
+        {% if prediction == 1 %}
+          ⚠️ ตรวจพบแนวโน้ม <strong>โรคไตเรื้อรัง</strong>
+        {% else %}
+          ✅ ไม่พบแนวโน้ม <strong>โรคไตเรื้อรัง</strong>
+        {% endif %}
+      </div>
+      {% if probability is not none %}
+        <p style="margin-top: 10px; text-align:center;">
+          ความน่าจะเป็น: <strong>{{ '%.2f'|format(probability*100) }}%</strong>
+        </p>
+      {% endif %}
+    {% endif %}
+
+    {% if error %}
+      <div class="result-box" style="background-color: #fff3cd; color: #856404; border: 2px solid #ffeeba;">
+        ❗ เกิดข้อผิดพลาด: {{ error }}
+      </div>
+    {% endif %}
+
+    <!-- {% if prediction is not none %}
+      <div class="result-box"
+          style="
+            background-color: {{ '#ffe6e6' if prediction == 1 else '#ccffcc' }};
+            color: {{ '#cc0000' if prediction == 1 else '#006600' }};
+            border: 2px solid {{ '#ff4d4d' if prediction == 1 else '#33cc33' }};">
+        {% if prediction == 1 %}
+          ⚠️ ตรวจพบแนวโน้ม <strong>โรคไตเรื้อรัง</strong>
+        {% else %}
+          ✅ ไม่พบแนวโน้ม <strong>โรคไตเรื้อรัง</strong>
+        {% endif %}
+      </div>
+
+      {% if probability is not none %}
+        <p style="margin-top: 10px; text-align:center;">
+          ความน่าจะเป็น: <strong>{{ '%.2f'|format(probability*100) }}%</strong>
+        </p>
+      {% endif %}
+    {% endif %} -->
+
+  </div>
+</div>
+<footer>พัฒนาโดยทีม MIDTHaI © 2025 -- Narongdech</footer>
+
+<script>
+  window.onload = function () {
+    const resultBox = document.getElementById("result");
+    if (resultBox) {
+      resultBox.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+</script>
+
+</body>
+</html>
